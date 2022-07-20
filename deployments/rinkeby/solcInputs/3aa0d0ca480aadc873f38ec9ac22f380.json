@@ -1,0 +1,41 @@
+{
+  "language": "Solidity",
+  "sources": {
+    "contracts/FundMe.sol": {
+      "content": "//Get funds from users\n//withdraw funds \n//set a minimum funding value in USD\n\n//SPDX-License-Identifier: MIT\n\npragma solidity ^0.8.0;\n\nimport \"./PriceConverter.sol\";\n\n\ncontract FundMe {\n    //library\n    using PriceConverter for uint256;\n\n    uint public minimumUsd = 50*1e18;\n\n    address[] public funders;\n    mapping(address=>uint256) public addressToAmountFunded;\n\n    address public owner;\n    AggregatorV3Interface public priceFeed;\n    constructor(address priceFeedAddress) {\n        owner = msg.sender;\n        priceFeed = AggregatorV3Interface(priceFeedAddress); \n    }\n\n    function fund() public payable{\n        //Want to be able to set a minimum fund  \n        //1. How do we send ETH to this contract?\n        require(msg.value.getConversionRate(priceFeed)>=minimumUsd, \"Didn't send enough!\"); /// = 1*10**18\n        //How do we convert usd to eth , we cannot make any API request! \n       //msg.value has 18 decimal places\n       funders.push(msg.sender);\n       addressToAmountFunded[msg.sender] = msg.value;\n    }\n\n\n    function withdraw() public onlyOwner{\n        //Check if the caller is the owner as owner can only withdraw the money\n        // require(msg.sender == owner, \"Sender is not owner\");\n        //for loop //[1,2,3,4] works same as other languages\n        /*starting index, ending index, step amount*/\n\n\n        for(uint256 funderIndex = 0; funderIndex>funders.length; funderIndex++) {\n            //code\n            address funder = funders[funderIndex];\n            addressToAmountFunded[funder] = 0;\n        }\n\n        //reset the array\n        funders = new address[](0);\n        //actually withdraw the funds\n\n\n        /*There are three ways to tranfer or withdraw funds in\n\n        transfer\n        payable(msg.sender).transfer(address(this).balance);\n\n        How it works : \n        1. Reverts the transaction if gas fee increases 2300 and throws error\n--------------------------------------------------------------------------------\n\n        send\n        bool sendSuccess = payable(msg.sender).send(address(this).balance);\n\n        How it works : \n        1. Doesnt error or revert, it returns a boolean true or false wether the transaction went through or not\n        2. Also capped at 2300 gas\n\n---------------------------------------------------------------------\n        call\n        (bool callSuccess,)=payable(msg.sender).call{value : address(this.balance)}(\"\")\n        require(callSuccess, \"call failed\");\n\n----------------------------------------------------------------------------------------\\\nOut of above three call is the most reccomended way\n        */ \n\n        (bool callSuccess,) = payable(msg.sender).call{value : address(this).balance}(\"\");\n        require(callSuccess, \"Call Failed\");\n\n\n    }\n\n    modifier onlyOwner {\n        require(msg.sender == owner, \"Sender is not owner!\");\n        _;\n    }\n}"
+    },
+    "contracts/PriceConverter.sol": {
+      "content": "//SPDX-License-Identifier: MIT\r\n\r\npragma solidity ^0.8.0;\r\n\r\nimport \"@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol\";\r\n\r\n\r\nlibrary PriceConverter {\r\n        function getPrice (AggregatorV3Interface priceFeed) internal view returns(uint256) {\r\n        //interation with contract outside we need ABI and address of contract;\r\n        //ABI : \r\n        //Address : 0x8A753747A1Fa494EC906cE90E9f37563A8AF630e\r\n       \r\n        (,int256 price,,,) = priceFeed.latestRoundData();\r\n        // ETH in terms of USD\r\n        return uint256(price * 1e10);\r\n    }\r\n\r\n    function getConversionRate(uint256 ethAmount, AggregatorV3Interface priceFeed) internal view returns (uint256) {\r\n        uint256 ethPrice = getPrice(priceFeed);\r\n        uint256 ethAmountInUsd = (ethPrice * ethAmount)/1e18;\r\n        return ethAmountInUsd;\r\n    }\r\n}"
+    },
+    "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol": {
+      "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ninterface AggregatorV3Interface {\n  function decimals() external view returns (uint8);\n\n  function description() external view returns (string memory);\n\n  function version() external view returns (uint256);\n\n  // getRoundData and latestRoundData should both raise \"No data present\"\n  // if they do not have data to report, instead of returning unset values\n  // which could be misinterpreted as actual reported values.\n  function getRoundData(uint80 _roundId)\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n\n  function latestRoundData()\n    external\n    view\n    returns (\n      uint80 roundId,\n      int256 answer,\n      uint256 startedAt,\n      uint256 updatedAt,\n      uint80 answeredInRound\n    );\n}\n"
+    }
+  },
+  "settings": {
+    "optimizer": {
+      "enabled": false,
+      "runs": 200
+    },
+    "outputSelection": {
+      "*": {
+        "*": [
+          "abi",
+          "evm.bytecode",
+          "evm.deployedBytecode",
+          "evm.methodIdentifiers",
+          "metadata",
+          "devdoc",
+          "userdoc",
+          "storageLayout",
+          "evm.gasEstimates"
+        ],
+        "": [
+          "ast"
+        ]
+      }
+    },
+    "metadata": {
+      "useLiteralContent": true
+    }
+  }
+}
