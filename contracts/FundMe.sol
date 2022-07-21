@@ -5,7 +5,7 @@ pragma solidity ^0.8.8;
 
 import "./PriceConverter.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-
+import "hardhat/console.sol";
 error FundMe__NotOwner();
 
 //Interfaces, Libraries, 
@@ -51,7 +51,9 @@ contract FundMe {
         // require(msg.sender == owner, "Sender is not owner");
         //for loop //[1,2,3,4] works same as other languages
         /*starting index, ending index, step amount*/
-
+        console.log('Withdraw called by  : ', msg.sender);
+        console.log('Balance withdrawn  : ', address(this).balance);
+    
 
         for(uint256 funderIndex = 0; funderIndex>funders.length; funderIndex++) {
             //code
