@@ -1,7 +1,10 @@
 
 const { assert, expect } = require('chai');
 const {deployments, ethers, getNamedAccounts} = require('hardhat');
+const { developmentChains } = require('../../helper-hardhat-config');
 
+!developmentChains.includes(network.name)?
+describe.skip:
 describe("FundMe", async function() {
     let fundMe;
     let deployer
@@ -18,7 +21,7 @@ describe("FundMe", async function() {
     })
     describe("constructor", async function() {
         it("sets the aggregator address correctly", async function() {
-            const response = await fundMe.priceFeed();
+            const response = await fundMe.getPriceFeed();
             assert.equal(mockV3Aggregator.address, response)
         })
     })
@@ -32,13 +35,13 @@ describe("FundMe", async function() {
         it("updates the ammount funded data structure", async function() {
             await fundMe.fund({value : sendValue});
             //get function for public
-            const response = await fundMe.addressToAmountFunded(deployer);
+            const response = await fundMe.getAddressToAmountFunded(deployer);
             assert.equal(response.toString(), sendValue.toString());
         })
 
-        it("Adds funder to array of funders", async function() {
+        it("Adds funder to array of getFunder", async function() {
             await fundMe.fund({value : sendValue});
-            const funder = await fundMe.funders(0);
+            const funder = await fundMe.getFunder(0);
             assert.equal(funder,deployer);
         })
     });
@@ -65,6 +68,50 @@ describe("FundMe", async function() {
         //Assert
         assert.equal(endingFundmeBalance,0);
         assert.equal(startingFundMeBalance.add(startingDeployerBalance).toString(),endingDeployerBalance.add(gasCost).toString());
+       });
+
+       it("allow us to withdraw with multiple getFunder", async function() {
+        //Arrange
+        const accounts = await ethers.getSigners();
+        for(let i=1; i<6; ++i) {
+            const fundMeConnectedContract = await fundMe.connect(
+                accounts[i]
+            )
+            await fundMeConnectedContract.fund({value : sendValue});
+        }
+
+        const startingFundMeBalance = await ethers.provider.getBalance(fundMe.address);
+        const startingDeployerBalance = await fundMe.provider.getBalance(deployer);
+        //Act
+
+        const transactionResponse = await fundMe.withdraw();
+        const transactionReciept = await transactionResponse.wait(1);
+
+        const {gasUsed,effectiveGasPrice} = transactionReciept;
+        const gasCost = gasUsed.mul(effectiveGasPrice);
+
+
+        const endingFundmeBalance=  await fundMe.provider.getBalance(fundMe.address);
+        const endingDeployerBalance = await fundMe.provider.getBalance(deployer);
+        //Assert
+        assert.equal(endingFundmeBalance,0);
+        assert.equal(startingFundMeBalance.add(startingDeployerBalance).toString(),endingDeployerBalance.add(gasCost).toString());
+
+        //Funder are reset properly
+        await expect(fundMe.getFunder(0)).to.be.reverted
+
+        // for(i=1; i<6; ++i) {
+        //     assert.equal(await fundMe.getAddressToAmountFunded(accounts[i].address), 0)
+        // }
+       })
+
+
+       it("only allows owner to withdraw", async function() {
+        const accounts = await ethers.getSigners();
+        const attacker = accounts[1];
+        //connects account not just address so we require whole object instead of just address
+        const attackerConnectedContract = await fundMe.connect(attacker);
+        await expect(attackerConnectedContract.withdraw()).to.be.revertedWith("FundMe__NotOwner");
        })
     })
 }) 

@@ -4,10 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+   "test" : "yarn hardhat test",
+   "test:staging" : "yarn hardhat test --network rinkeby",
+   "lint" : "npx solhit 'contracts/*.sol'",
+   "format" : "npx prettier --write",
+   "coverage" : "npx hardhat coverage"
   },
   "keywords": [],
-  "author": "",
+  "author": "Kunal Sangtiani",
   "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
